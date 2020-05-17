@@ -60,17 +60,21 @@ getAllDepartments = async () => {
 }
 
 addEmployee =  async ({lastName, firstName, role, managerId}) => {
-    const inserted = await conn.query(
-        "INSERT INTO employee SET ?",
-        {
-            first_name: firstName,
-            last_name: lastName,
-            role_id: role,
-            manager_id: managerId
-        }
-    )
-    console.log(inserted);
-    return inserted;
+    try { 
+        await conn.query(
+            "INSERT INTO employees SET ?",
+            {
+                first_name: firstName,
+                last_name: lastName,
+                role_id: role,
+                manager_id: managerId
+            }
+        )   
+        return true;
+    } catch(err) {
+        console.log(err)
+        return false;
+    }
 }
 
 getEmployeesByDept = async (department) => {
