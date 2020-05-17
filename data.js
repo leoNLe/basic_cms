@@ -49,7 +49,15 @@ getRoles = async () => {
     };
 }
 
+getAllDepartments = async () => {
+    try {
+        const departments = await conn.query("Select * from departments");
 
+        return departments;
+    } catch(err) {
+        throw new Error(err);
+    }
+}
 
 addEmployee =  async ({lastName, firstName, role, managerId}) => {
     const inserted = await conn.query(
@@ -65,6 +73,25 @@ addEmployee =  async ({lastName, firstName, role, managerId}) => {
     return inserted;
 }
 
+getEmployeesByDept = async (department) => {
+    try {
+        const employees = await conn.query(
+            `   SELECT concat(employees.first_name, " ", employees.last_name) \
+                FROM employees \ 
+                LEFT JOIN roles \
+                ON employees.role_id = roles.id \
+                WHERE ?`, 
+            {
+                department_id: department
+            }
+        )
+        return employees;
+    } catch(err) {
+        throw err;
+    }
+
+}
+
 getAllEmployees = async () => {
 
     try {        
@@ -78,10 +105,11 @@ getAllEmployees = async () => {
 		        ON employees.manager_id = manager.id) AS employees_new
             LEFT JOIN roles
             ON employees_new.role_id = roles.id;`);
-            
+
         return new Promise((resolve )=> {
             resolve(data);
         });
+
     } catch(err) {
         throw err;
     }
@@ -92,7 +120,9 @@ module.exports = {
     getAllEmployees,
     addEmployee,
     getRoles,
+    getAllDepartments,
     connectToDB,
     disconnectFromDB,
+    getEmployeesByDept
 }
 

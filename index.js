@@ -18,19 +18,12 @@ const startingPrompt =  [
         name: "choice"
 }]
 
-viewAllEmployees = async () => {
-    const data = await db.getAllEmployees();
-    console.table(data);
-    return new Promise((resolve, rejection)=> {
-        resolve();
-    })
-}
-
 getEmployeesName = async () => {
     const data = await db.getAllEmployees();
     const employees = data.map((employee) => `${employee.first_name} ${employee.last_name}`);
     return employees;
 }
+
 
 getRoles = async () => {
     try {
@@ -84,10 +77,50 @@ addEmployee = async () => {
     });
 }
 
+getDepartmentsPrompt = async () => {
+    try { 
+        const data = await getAllDepartments();
+        const departments = data.map(department => {  
+            return {value: department.id, name: department.department 
+        }})
+        return departments;
+    } catch (err) {
+        throw err;
+    }
+}
+viewAllEmployees = async () => {
+    const data = await db.getAllEmployees();
+    console.table(data);
+    // return new Promise((resolve, rejection)=> {
+    //     resolve();
+    // })
+}
+viewByDepartment = async () => {
+    const departments = await getDepartmentsPrompt();
+    console.log(departments);
+    try {
+        //Get ID from 
+        const {department}= await inquirer.prompt([{
+            type: "list",
+            message: "Which department do you want to see?",
+            name: "department",
+            choices: departments
+        }])
+        //get data from db for that department
+        const employees = await db.getEmployeesByDept(department);
+        console.table(employees);
+    } catch (err){
+        throw err;
+    }
+
+}
 performAction = async (choice) => {
     switch (choice){
         case 0:
             await viewAllEmployees();
+            break;
+        case 1: 
+            await viewByDepartment();
             break;
         case 3:
             await addEmployee();
