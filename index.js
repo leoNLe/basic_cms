@@ -33,12 +33,66 @@ getRoles = async () => {
     try {
         const data = await db.getRoles();
         const roles = data.map(role => role.title);
-        return new Promise(resolve=> resolve(roles));
-
+        return roles;
     } catch (err){
 
         console.log(err);
         return new Promise(reject=> reject(err));
+    }
+}
+
+getDepartmentsPrompt = async () => {
+    try { 
+        const data = await getAllDepartments();
+        const departments = data.map(department => {  
+            return {value: department.id, name: department.department 
+        }})
+
+        return departments;
+    } catch (err) {
+        throw err;
+    }
+}
+isNum = async (input) => {
+    let num = parseInt(input);
+    if(Number.isInteger(num) && input> 0) {
+
+        return true;
+    } else { 
+        console.log("\nInput error try again.");
+        return false;
+    }
+}
+addRole = async () => {
+    const departments = await getDepartmentsPrompt(); 
+
+    try {
+        const data = await inquirer.prompt([
+            {
+                message: "What is the name of the new role?",
+                name: "title"
+            },
+            {
+                type: "number",
+                message: "What is the salary?",
+                name: "salary",
+                validate: isNum
+            },
+            {
+                type: "list",
+                message: "What is the role's department?",
+                name: "department_id",
+                choices: departments
+            }
+        ]);
+        
+        if(await db.addRole(data)){
+            console.log("Role Added.");
+        } else {
+            console.log("Something went wrong.");
+        }
+    } catch (err) {
+        console.log(err)
     }
 }
 
@@ -83,25 +137,14 @@ addEmployee = async () => {
     }
 }
 
-getDepartmentsPrompt = async () => {
-    try { 
-        const data = await getAllDepartments();
-        const departments = data.map(department => {  
-            return {value: department.id, name: department.department 
-        }})
-        return departments;
-    } catch (err) {
-        throw err;
-    }
-}
-
 viewAllEmployees = async () => {
     const data = await db.getAllEmployees();
     console.table(data);
+
 }
+
 viewByDepartment = async () => {
     const departments = await getDepartmentsPrompt();
-    console.log(departments);
     try {
         //Get ID from 
         const {department} = await inquirer.prompt([{
@@ -116,8 +159,8 @@ viewByDepartment = async () => {
     } catch (err){
         throw err;
     }
-
 }
+
 performAction = async (choice) => {
     switch (choice){
         case 0:
@@ -131,11 +174,10 @@ performAction = async (choice) => {
         case 3:
             await addEmployee();
             break;
+        case 4: 
+            await addRole();
+            break;
     }
-
-    return new Promise((resolve, rejection)=> {
-        resolve();
-    })
 }
 
 prompt = async () => {

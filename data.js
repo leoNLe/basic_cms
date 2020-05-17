@@ -59,6 +59,24 @@ getAllDepartments = async () => {
     }
 }
 
+addRole = async ({title, salary, department_id }) => {
+
+    try {
+        await conn.query(
+            "INSERT INTO roles SET ?", 
+            {
+                title,
+                salary,
+                department_id
+            }
+        )
+        return true;
+    } catch(err) {
+        console.log(err)
+        return false;
+    }
+}
+
 addEmployee =  async ({lastName, firstName, role, managerId}) => {
     try { 
         await conn.query(
@@ -127,6 +145,7 @@ module.exports = {
     getAllDepartments,
     connectToDB,
     disconnectFromDB,
-    getEmployeesByDept
+    getEmployeesByDept,
+    addRole,
 }
 
