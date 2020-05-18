@@ -53,6 +53,7 @@ getDepartmentsPrompt = async () => {
         throw err;
     }
 }
+
 isNum = async (input) => {
     let num = parseInt(input);
     if(Number.isInteger(num) && input> 0) {
@@ -63,6 +64,27 @@ isNum = async (input) => {
         return false;
     }
 }
+
+addDepartment = async () => {
+    try {
+        const {department}= await inquirer.prompt(
+            {
+                message: "what is the new department's name?",
+                name: "department"
+            }
+        )
+        
+        if(db.addDepartment(department)){
+            console.log("Department added.");
+        } else {
+            console.log("Error. Not added.");
+        }
+        
+    } catch(err){
+        console.log(err);
+    }
+}
+
 addRole = async () => {
     const departments = await getDepartmentsPrompt(); 
 
@@ -176,6 +198,9 @@ performAction = async (choice) => {
             break;
         case 4: 
             await addRole();
+            break;
+        case 5:
+            await addDepartment();
             break;
     }
 }
