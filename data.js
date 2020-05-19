@@ -38,6 +38,37 @@ disconnectFromDB = () => {
     conn.close();
 }
 
+updateManager = async (id, manager_id) => {
+    try {
+        const response = conn.query(
+            "Update employees SET ? WHERE",
+            [
+                {manager_id},
+                {id}
+            ]
+        )
+        return true;
+    } catch(err){
+        console.log(err);
+        return new Promise((resolve, reject)=> reject(err));
+    }
+}
+updateRole = async (id, role_id) => {
+    try {
+        const response = conn.query(
+            "Update employees SET ? WHERE ?",
+            [
+                { role_id },
+                { id }
+            ]
+        );
+        return response;
+    } catch (err) {
+        console.log(err);
+        return new Promise((resolve, reject)=> reject(err));
+    }
+}
+
 getRoles = async () => {
     try {
 
@@ -61,19 +92,28 @@ getAllDepartments = async () => {
 
 removeEmployee = async (id) => {
     try {
+        const response = await conn.query(
+            `DELETE FROM table_name
+            WHERE ?;`, 
+            { id });        
+
+        return response; 
         
     } catch (err) {
         console.log(err);
         return false;
     }
 }
+
 addDepartment = async (department) => {
     try{
         await conn.query(
             "INSERT INTO departments SET ?",
             { department }
         )
+
         return true;
+    
     } catch(err) {
         console.log(err);
         return false;
@@ -116,6 +156,21 @@ addEmployee =  async ({last_name, first_name, role_id, manager_id}) => {
     }
 }
 
+getEmployeesByMgr = async (manager_id) => {
+    try {
+        const employees = await conn.query(
+            `SELECT concat(employees.first_name, " ", employees.last_name)
+             FROM employees
+             WHERE ?
+            `,
+            { manager_id }
+        )
+        return employees
+    } catch (err) {
+        console.log(err);
+        return new Promise((resolve, reject)=> reject(err));
+    }
+}
 getEmployeesByDept = async (department) => {
     try {
         const employees = await conn.query(
@@ -169,7 +224,9 @@ module.exports = {
     getEmployeesByDept,
     addRole,
     addDepartment,
-    removeEmployee
-
+    removeEmployee,
+    updateRole,
+    updateManager,
+    employeesByMgr
 }
 

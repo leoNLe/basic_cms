@@ -9,7 +9,9 @@ const startingPrompt =  [
 		//Changes to choices will require update to to prompt and perform action method.
 		choices: [
 			{ value: 0, name: "View All Employees" },
-			{ value: 1, name: "View All Employees By Department" }, { value: 2, name: "View All Employees By Manager" }, { value: 3, name: "Add Employee" },
+            { value: 1, name: "View All Employees By Department" }, 
+            { value: 2, name: "View All Employees By Manager" },
+            { value: 3, name: "Add Employee" },
 			{ value: 4, name: "Add Role"},
 			{ value: 5, name: "Add Department"},
 			{ value: 6, name: "Remove Employee" }, 
@@ -29,17 +31,15 @@ getEmployeesNamePrompt = async () => {
 	return employees;
 }
 
-getRoles = async () => {
+getRolesPrompt = async () => {
 	try {
 		const data = await db.getRoles();
 		const roles = data.map(role => { 
 			return {value: role.id, name: role.title}
 		});
-		console.log(roles);
 		return roles;
 	} catch (err){
 
-		console.log(err);
 		return new Promise(reject=> reject(err));
 	}
 }
@@ -64,6 +64,68 @@ isNum = async (input) => {
 	} else { 
 		console.log("\nInput error try again.");
 		return false;
+	}
+}
+
+updateManager = async () => {
+    try {
+        const employees = await  getEmployeesNamePrompt();
+        const employeeToUpdate = await inquirer.prompt([
+            {
+                type: "list",
+                message: "Which employee do you want to change Manager?", 
+                choice: employees,
+                name: "id",
+            },
+        ]);
+        if(employeeToUpdate === null) 
+            return;
+
+        const newEmployeeList = employees.filter(employee =>  employee.id !==employeeToUpdate.id);
+        
+        const {manager_id} = await inquirer.prompt({
+            type: "list",
+            message: "Who is their new manager?",
+            choice: newEmployeeList,
+            name: "manager_id"
+        })
+
+        const response = db.updateManager(employeeToUpdate.id, manager_id);
+        if(response) {
+            console.log("Manager updated.");
+        }
+    } catch(err) {
+        console.log(err);
+        console.log("Issue occurred.  Manager was not added.");
+    }
+}
+
+updateEmployeeRole = async () => {
+	
+	try {
+        const employees = await getEmployeesNamePrompt();
+        const roles = await getRolesPrompt();
+		const employeeToUpdate = await inquirer.prompt([{
+                type: "list",
+                message: "Which employee do you want to update?", 
+                choices: employees,
+                name: "id"
+            }, 
+            {
+                type: "list",
+                message: "What is there new Role?",
+                choices: roles,
+                name: "role_id"
+            }
+        ]) 
+
+        if(employeeToUpdate) {
+            const response = await db.updateRole(employeeToUpdate.id, employeeToUpdate.roles_id);
+            console.log(response);
+        }
+        
+	} catch (err) {
+		console.log(err);
 	}
 }
 
@@ -95,9 +157,12 @@ removeEmployee = async () => {
 			message: "Which employee do you want to remove?",
 			name: "employee",
 			choices: employees
-		})
+		});
+
 		if(employee) {
-			db.removeEmployee()
+			const response = await db.removeEmployee(employee);
+
+			console.log(response);
 		}
 		
 	}catch(err) {
@@ -105,6 +170,7 @@ removeEmployee = async () => {
 	}
 
 }
+
 addRole = async () => {
 	const departments = await getDepartmentsPrompt(); 
 
@@ -140,7 +206,7 @@ addRole = async () => {
 
 addEmployee = async () => {
 
-	const roles = await getRoles();
+	const roles = await getRolesPrompt();
 	const managers = await getEmployeesNamePrompt();
 	try {
 		const employee = await inquirer.prompt([
@@ -178,6 +244,27 @@ addEmployee = async () => {
 	}
 }
 
+viewByManager = async () => {
+    try {
+        const employeesPrompt = await getEmployeesNamePrompt();
+
+        const {manager_id} = await prompt.inquirer({
+            type: "list",
+            message: "Which manager's employee/s do you want to see?",
+            name: "manager_id",
+            choices: employeesPrompt
+        })
+
+        if(!manager_id) 
+            return;
+
+        const employees = db.getEmployeesByMgr(manager_id);
+    } catch (err) {
+        console.log(err);
+    }
+}
+
+
 viewAllEmployees = async () => {
 	const data = await db.getAllEmployees();
 	console.table(data);
@@ -210,7 +297,8 @@ performAction = async (choice) => {
 		case 1: 
 			await viewByDepartment();
 			break;
-		case 2:
+        case 2: 
+            await viewByManager();
 			break;
 		case 3:
 			await addEmployee();
@@ -223,6 +311,9 @@ performAction = async (choice) => {
 			break;
 		case 6: 
 			await removeEmployee();
+			break;
+		case 7:
+			await updateEmployeeRole();
 			break;
 	}
 }
