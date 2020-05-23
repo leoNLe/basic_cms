@@ -1,6 +1,6 @@
-DROP TABLE IF EXISTS company_db;
+DROP DATABASE IF EXISTS company_db;
 
-CREATE TABLE company_db;
+CREATE DATABASE company_db;
 
 USE company_db;
 
@@ -32,7 +32,7 @@ CREATE TABLE employees (
         REFERENCES roles(id),
     FOREIGN KEY (manager_id)
         REFERENCES roles(id)
-)
+);
 
 INSERT INTO departments (department) VALUES
     ("Sales"),
