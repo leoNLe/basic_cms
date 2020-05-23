@@ -105,7 +105,7 @@ updateEmployeeRole = async () => {
 	try {
         const employees = await getEmployeesNamePrompt();
         const roles = await getRolesPrompt();
-		const employeeToUpdate = await inquirer.prompt([{
+				const employeeToUpdate = await inquirer.prompt([{
                 type: "list",
                 message: "Which employee do you want to update?", 
                 choices: employees,
@@ -248,7 +248,7 @@ viewByManager = async () => {
     try {
         const employeesPrompt = await getEmployeesNamePrompt();
 
-        const {manager_id} = await prompt.inquirer({
+        const {manager_id} = await inquirer.prompt({
             type: "list",
             message: "Which manager's employee/s do you want to see?",
             name: "manager_id",
@@ -258,7 +258,8 @@ viewByManager = async () => {
         if(!manager_id) 
             return;
 
-        const employees = db.getEmployeesByMgr(manager_id);
+				const employees = await db.getEmployeesByMgr(manager_id);
+				console.table(employees);
     } catch (err) {
         console.log(err);
     }
@@ -338,6 +339,7 @@ prompt = async () => {
 			console.log(err);
 		} 
 	}
+
 	db.disconnectFromDB()
 }
 

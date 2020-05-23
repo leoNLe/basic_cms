@@ -17,7 +17,7 @@ let conn;
 createConnection = (config) => {
     const connection = mysql.createConnection(config);
     return {
-        query(sql, args) {
+        query_promisify(sql, args) {
             return util.promisify(connection.query) 
                     .call(connection, sql, args);
         },
@@ -40,90 +40,84 @@ disconnectFromDB = () => {
 
 updateManager = async (id, manager_id) => {
     try {
-        const response = conn.query(
+        await conn.query_promisify(
             "Update employees SET ? WHERE",
             [
                 {manager_id},
                 {id}
             ]
         )
-        return true;
+        return Promise.resolve(true);
     } catch(err){
-        console.log(err);
-        return new Promise((resolve, reject)=> reject(err));
+        return Promise.reject(err.code);
     }
 }
 updateRole = async (id, role_id) => {
     try {
-        const response = conn.query(
+        return await conn.query_promisify(
             "Update employees SET ? WHERE ?",
             [
                 { role_id },
                 { id }
             ]
         );
-        return response;
+
     } catch (err) {
         console.log(err);
-        return new Promise((resolve, reject)=> reject(err));
+        return Promise.reject(err.code);
     }
 }
 
 getRoles = async () => {
     try {
-
-        const roles = await conn.query("SELECT * FROM roles");
-        return new Promise(resolve=> resolve(roles));
+        return await conn.query_promisify("SELECT * FROM roles");
     } catch (err) {
-        
-        return new Promise(reject=> reject(err));
+        console.log(err);
+        return Promise.reject(err);
     };
 }
 
 getAllDepartments = async () => {
     try {
-        const departments = await conn.query("Select * from departments");
+        return await conn.query_promisify("Select * from departments");
 
-        return departments;
     } catch(err) {
-        throw new Error(err);
+        console.log(`Error in database: getAllDepartments(). \n Error code: ${err.code} \n `)
+        return Promise.reject(err.code);
     }
 }
 
 removeEmployee = async (id) => {
     try {
-        const response = await conn.query(
+        return await conn.query_promisify(
             `DELETE FROM table_name
             WHERE ?;`, 
             { id });        
-
-        return response; 
         
     } catch (err) {
         console.log(err);
-        return false;
+        return Promise.reject(err.code);
     }
 }
 
 addDepartment = async (department) => {
     try{
-        await conn.query(
+        await conn.query_promisify(
             "INSERT INTO departments SET ?",
             { department }
         )
 
-        return true;
-    
+        return Promise.resolve(true);
     } catch(err) {
         console.log(err);
-        return false;
+        return Promise.reject(err.code);
     }
 }
 
-addRole = async ({title, salary, department_id }) => {
+addRole = async  ({title, salary, department_id }) => {
 
-    try {
-        await conn.query(
+    try{ 
+        const result = await conn.query_promisify(
             "INSERT INTO roles SET ?", 
             {
                 title,
@@ -131,16 +125,19 @@ addRole = async ({title, salary, department_id }) => {
                 department_id
             }
         )
-        return true;
+        console.log(result);
+        return Promise.resolve(true);
+
     } catch(err) {
-        console.log(err)
-        return false;
+        console.log(err);
+        return Promise.reject(err.code);
+
     }
 }
 
 addEmployee =  async ({last_name, first_name, role_id, manager_id}) => {
     try { 
-        await conn.query(
+        await conn.query_promisify(
             "INSERT INTO employees SET ?",
             {
                 last_name,
@@ -149,67 +146,61 @@ addEmployee =  async ({last_name, first_name, role_id, manager_id}) => {
                 manager_id
             }
         )   
-        return true;
+        return Promise.resolve(true) ;
     } catch(err) {
         console.log(err)
-        return false;
+		return Promise.reject(err.code);
     }
 }
 
 getEmployeesByMgr = async (manager_id) => {
     try {
-        const employees = await conn.query(
+        return  conn.query_promisify(
             `SELECT concat(employees.first_name, " ", employees.last_name)
              FROM employees
              WHERE ?
             `,
             { manager_id }
         )
-        return employees
     } catch (err) {
         console.log(err);
-        return new Promise((resolve, reject)=> reject(err));
+        return  resolve.reject(err.code);
     }
 }
-getEmployeesByDept = async (department) => {
-    try {
-        const employees = await conn.query(
-            `   SELECT concat(employees.first_name, " ", employees.last_name) \
+getEmployeesByDept =  (department) => {
+    return conn.query_promisify(
+                `SELECT concat(employees.first_name, " ", employees.last_name) \
                 FROM employees \ 
                 LEFT JOIN roles \
                 ON employees.role_id = roles.id \
                 WHERE ?`, 
-            {
-                department_id: department
-            }
-        )
-        return employees;
-    } catch(err) {
-        throw err;
-    }
-
+                {
+                    department_id: department
+                })
+            .then(employees => employees)
+            .catch(err=> {
+                console.log("Error in getEmployeesByDept.");
+                return err
+            })
 }
 
 getAllEmployees = async () => {
 
     try {        
-        const  data = await conn.query(
+        return  await conn.query_promisify(
             `SELECT employees_new.id, employees_new.first_name, employees_new.last_name, roles.title, 
-		            roles.salary, manager
+                    roles.salary, manager
             FROM
                 (SELECT employees.id, employees.first_name, employees.last_name, employees.role_id, 
-		                concat(manager.first_name, " ", manager.last_name) as manager
+                        concat(manager.first_name, " ", manager.last_name) as manager
                 FROM employees LEFT JOIN employees as manager
-		        ON employees.manager_id = manager.id) AS employees_new
+                ON employees.manager_id = manager.id) AS employees_new
             LEFT JOIN roles
             ON employees_new.role_id = roles.id;`);
 
-        return new Promise((resolve )=> {
-            resolve(data);
-        });
-
     } catch(err) {
-        throw err;
+        console.log(err);
+        return Promise.reject(err.code);
     }
 
 }
@@ -227,6 +218,6 @@ module.exports = {
     removeEmployee,
     updateRole,
     updateManager,
-    employeesByMgr
+    getEmployeesByMgr
 }
 
