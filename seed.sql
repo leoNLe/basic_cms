@@ -1,6 +1,6 @@
-DROP DATABASE IF EXISTS company_db;
+-- DROP DATABASE IF EXISTS company_db;
 
-CREATE DATABASE company_db;
+-- CREATE DATABASE company_db;
 
 USE company_db;
 
@@ -12,13 +12,12 @@ CREATE TABLE departments (
 
 CREATE TABLE roles (
     id INT AUTO_INCREMENT,
-    title VARCHAR(30),
-    salary DECIMAL,
+    title VARCHAR(30) NOT NULL,
+    salary DECIMAL NOT NULL,
     department_id INT,
     PRIMARY KEY (id),
     FOREIGN KEY (department_id)
-		REFERENCES departments(id)
-
+		REFERENCES departments(id) ON DELETE CASCADE
 );
 
 CREATE TABLE employees (
@@ -28,10 +27,10 @@ CREATE TABLE employees (
     role_id INT,
     manager_id INT,  
     PRIMARY KEY (id),
-    FOREIGN KEY (role_id)
-        REFERENCES roles(id),
+	FOREIGN KEY (role_id) 
+		REFERENCES roles(id) ON DELETE CASCADE,
     FOREIGN KEY (manager_id)
-        REFERENCES roles(id)
+        REFERENCES roles(id) ON DELETE SET NULL
 );
 
 INSERT INTO departments (department) VALUES
@@ -59,4 +58,3 @@ INSERT INTO employees (first_name, last_name, role_id, manager_id) VALUES
     ("Sarah", "Lourd", 6, null),
     ("Tom", "Allen", 7, 6),
     ("Tammer", "Galal", 4, 4);
-
