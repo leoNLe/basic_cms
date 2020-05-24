@@ -1,5 +1,6 @@
 const inquirer = require("inquirer");
 const db = require("./data");
+const cTable = require("console.table"); 
 
 const startingPrompt =  [
 	{
@@ -9,55 +10,60 @@ const startingPrompt =  [
 		//Changes to choices will require update to to prompt and perform action method.
 		choices: [
 			{ value: 0, name: "View All Employees" },
-            { value: 1, name: "View All Employees By Department" }, 
-            { value: 2, name: "View All Employees By Manager" },
-            { value: 3, name: "Add Employee" },
+			{ value: 1, name: "View All Employees By Department" }, 
+			{ value: 2, name: "View All Employees By Manager" },
+			{ value: 3, name: "Add Employee" },
 			{ value: 4, name: "Add Role"},
 			{ value: 5, name: "Add Department"},
 			{ value: 6, name: "Remove Employee" }, 
-			{ value: 7, name: "Update Employee Role" },
-			{ value: 8, name: "Update Employee Manager" },
-			{ value: 9, name: "Nothing" }
+			{ value: 7, name: "Remove Role"},
+			{	value: 8, name: "Remove Department"},
+			{ value: 9, name: "Update Employee Role" },
+			{ value: 10, name: "Update Employee Manager" },
+			{ value: 11, name: "Nothing" }
 		],
 		name: "choice"
 }]
 
-getEmployeesNamePrompt = async () => {
-	const data = await db.getAllEmployees();
-	const employees = data.map((employee) => {
-		return { value: employee.id, name: `${employee.first_name} ${employee.last_name}`}
-	});
-	employees.push({value: null, name:"None"});
-	return employees;
+async function getEmployeesNamePrompt() {
+	try{
+		const data = await db.getAllEmployees();
+		const employees = data.map((employee) => {
+			return { value: employee.id, name: `${employee.first_name} ${employee.last_name}`}
+		});
+		employees.push({value: null, name:"None"});
+
+		return Promise.resolve(employees);
+	} catch(err) {
+		console.log(err);
+		return Promise.reject(err);
+	}
 }
 
-getRolesPrompt = async () => {
+async function getRolesPrompt() {
 	try {
 		const data = await db.getRoles();
-		const roles = data.map(role => { 
-			return {value: role.id, name: role.title}
-		});
-		return roles;
+		return Promise.resolve(data.map(role => { 
+			return {value: role.id, name: role.title}})
+		)
 	} catch (err){
-
-		return new Promise(reject=> reject(err));
+		return Promise.reject(err);
 	}
 }
 
-getDepartmentsPrompt = async () => {
+async function getDepartmentsPrompt() {
 	try { 
 		const data = await getAllDepartments();
-		const departments = data.map(department => {  
-			return {value: department.id, name: department.department 
-		}})
+		return Promise.resolve( data.map(department => {  
+			return {value: department.id, name: department.department }}
+		))
 
-		return departments;
 	} catch (err) {
-		throw err;
+		throw Promise.reject(err);
 	}
 }
 
-isNum = async (input) => {
+function isNum(input)  {
 	let num = parseInt(input);
 	if(Number.isInteger(num) && input> 0) {
 		return true;
@@ -67,71 +73,92 @@ isNum = async (input) => {
 	}
 }
 
-updateManager = async () => {
-    try {
-        const employees = await  getEmployeesNamePrompt();
-        const employeeToUpdate = await inquirer.prompt([
-            {
-                type: "list",
-                message: "Which employee do you want to change Manager?", 
-                choice: employees,
-                name: "id",
-            },
-        ]);
-        if(employeeToUpdate === null) 
-            return;
-
-        const newEmployeeList = employees.filter(employee =>  employee.id !==employeeToUpdate.id);
-        
-        const {manager_id} = await inquirer.prompt({
-            type: "list",
-            message: "Who is their new manager?",
-            choice: newEmployeeList,
-            name: "manager_id"
-        })
-
-        const response = db.updateManager(employeeToUpdate.id, manager_id);
-        if(response) {
-            console.log("Manager updated.");
-        }
-    } catch(err) {
-        console.log(err);
-        console.log("Issue occurred.  Manager was not added.");
-    }
+async function removeDepartment() {	
+	try {
+		const departments = await getDepartmentsPrompt();
+		const {department_id} = await inquirer.prompt({
+			type: "list",
+			message: "Which department do you want to remove?",
+			choices: departments,
+			name: "department_id"
+		})
+		//checking if department still have employees
+		const isDeleted = await db.removeDepartment(department_id);
+		if(isDeleted.removed){
+			console.log(`Department was removed`);
+		} else {
+			console.log(`Department was not removed`);
+		}
+	} catch(err) {
+		console.log(err);
+	}
 }
 
-updateEmployeeRole = async () => {
+async function updateManager() {
+		try {
+				const employees = await  getEmployeesNamePrompt();
+				const employeeToUpdate = await inquirer.prompt([
+						{
+								type: "list",
+								message: "Which employee do you want to change Manager?", 
+								choice: employees,
+								name: "id",
+						},
+				]);
+				if(employeeToUpdate === null) 
+						return;
+
+				const newEmployeeList = employees.filter(employee =>  employee.id !==employeeToUpdate.id);
+				
+				const {manager_id} = await inquirer.prompt({
+					type: "list",
+					message: "Who is their new manager?",
+					choice: newEmployeeList,
+					name: "manager_id"
+				})
+
+				const response = db.updateManager(employeeToUpdate.id, manager_id);
+				if(response) {
+					console.log("Manager updated.");
+				}
+		} catch(err) {
+				console.log(err);
+				console.log("Issue occurred.  Manager was not added.");
+		}
+}
+
+async function updateEmployeeRole() {
 	
 	try {
-        const employees = await getEmployeesNamePrompt();
-        const roles = await getRolesPrompt();
-				const employeeToUpdate = await inquirer.prompt([{
-                type: "list",
-                message: "Which employee do you want to update?", 
-                choices: employees,
-                name: "id"
-            }, 
-            {
-                type: "list",
-                message: "What is there new Role?",
-                choices: roles,
-                name: "role_id"
-            }
-        ]) 
+		const employees = await getEmployeesNamePrompt();
+		const roles = await getRolesPrompt();
+		const employeeToUpdate = await inquirer.prompt([{
+						type: "list",
+						message: "Which employee do you want to update?", 
+						choices: employees,
+						name: "id"
+				}, 
+				{
+						type: "list",
+						message: "What is there new Role?",
+						choices: roles,
+						name: "role_id"
+				}
+		]) 
 
-        if(employeeToUpdate) {
-            const response = await db.updateRole(employeeToUpdate.id, employeeToUpdate.roles_id);
-            console.log(response);
-        }
-        
+		if(employeeToUpdate) {
+				const response = await db.updateRole(employeeToUpdate.id, employeeToUpdate.roles_id);
+				console.log(response);
+		}
+				
 	} catch (err) {
 		console.log(err);
 	}
 }
 
-addDepartment = async () => {
+async function addDepartment() {
 	try {
-		const {department}= await inquirer.prompt(
+		const {department} = await inquirer.prompt(
 			{
 				message: "what is the new department's name?",
 				name: "department"
@@ -146,10 +173,11 @@ addDepartment = async () => {
 		
 	} catch(err){
 		console.log(err);
+		return new Error(err);
 	}
 }
 
-removeEmployee = async () => {
+async function removeEmployee() {
 	const employees = await getEmployeesNamePrompt();
 	try {
 		const {employee} = await inquirer.prompt({
@@ -167,11 +195,35 @@ removeEmployee = async () => {
 		
 	}catch(err) {
 		console.log(err);
+		return new Error(err);
 	}
-
 }
 
-addRole = async () => {
+async function removeRole() {
+	try {
+		const rolePrompt = await getRolesPrompt();
+		const {roleToBeRm} = await inquirer.prompt({
+			type: "list",
+			message: "Which role would you want to remove?",
+			choices: rolePrompt,
+			name: "roleToBeRm"
+		})
+
+		if(!roleToBeRm)
+			return;
+
+		const {isDeleted}= await db.removeRole(roleToBeRm);
+		if(isDeleted) {
+			console.log(`Role deleted.`);
+		} else {
+			console.log(`Role is not deleted.`)
+		}
+	} catch(err) {
+		console.log(err);
+	}
+}
+
+async function addRole() {
 	const departments = await getDepartmentsPrompt(); 
 
 	try {
@@ -200,11 +252,13 @@ addRole = async () => {
 			console.log("Something went wrong.");
 		}
 	} catch (err) {
-		console.log(err)
+		console.log(err);
+		return new Error(err);
 	}
+
 }
 
-addEmployee = async () => {
+async function addEmployee() {
 
 	const roles = await getRolesPrompt();
 	const managers = await getEmployeesNamePrompt();
@@ -234,45 +288,41 @@ addEmployee = async () => {
 
 		const result = await db.addEmployee(employee);
 
-		if(result){
-			console.log("Employees Add");
-		} else {
-			console.log("Error.  Employee is not added");
-		}
+		console.log("Employees Add");
+
 	} catch(err) {
-		throw new Err(err);
+		console.log(`Error.  Employee are not added b/c of ${err}`);
+		return new Error(err);
 	}
 }
 
-viewByManager = async () => {
-    try {
-        const employeesPrompt = await getEmployeesNamePrompt();
+async function viewByManager() {
+		try {
+				const employeesPrompt = await getEmployeesNamePrompt();
 
-        const {manager_id} = await inquirer.prompt({
-            type: "list",
-            message: "Which manager's employee/s do you want to see?",
-            name: "manager_id",
-            choices: employeesPrompt
-        })
+				const {manager_id} = await inquirer.prompt({
+						type: "list",
+						message: "Which manager's employee/s do you want to see?",
+						name: "manager_id",
+						choices: employeesPrompt
+				})
 
-        if(!manager_id) 
-            return;
+				if(!manager_id) 
+						return;
 
 				const employees = await db.getEmployeesByMgr(manager_id);
 				console.table(employees);
-    } catch (err) {
-        console.log(err);
-    }
+		} catch (err) {
+				console.log(err);
+		}
 }
 
-
-viewAllEmployees = async () => {
+async function viewAllEmployees() {
 	const data = await db.getAllEmployees();
 	console.table(data);
-
 }
 
-viewByDepartment = async () => {
+async function viewByDepartment() {
 	const departments = await getDepartmentsPrompt();
 	try {
 		//Get ID from 
@@ -286,11 +336,12 @@ viewByDepartment = async () => {
 		const employees = await db.getEmployeesByDept(department);
 		console.table(employees);
 	} catch (err){
-		throw err;
+		console.log(err);
+		return new Error(err);
 	}
 }
 
-performAction = async (choice) => {
+async function performAction(choice) {
 	switch (choice){
 		case 0:
 			await viewAllEmployees();
@@ -298,8 +349,8 @@ performAction = async (choice) => {
 		case 1: 
 			await viewByDepartment();
 			break;
-        case 2: 
-            await viewByManager();
+		case 2: 
+			await viewByManager();
 			break;
 		case 3:
 			await addEmployee();
@@ -314,12 +365,21 @@ performAction = async (choice) => {
 			await removeEmployee();
 			break;
 		case 7:
+			await removeRole();
+			break;
+		case 8:
+			await removeDepartment();
+			break;
+		case 9:
 			await updateEmployeeRole();
+			break;
+		case 10:
+			await updateManager();
 			break;
 	}
 }
 
-prompt = async () => {
+async function prompt() {
 
 	db.connectToDB();
 	let toContinue  = true;
@@ -328,7 +388,7 @@ prompt = async () => {
 		try {
 			const { choice } = await inquirer.prompt(startingPrompt);
 
-			if(choice === 9){
+			if(choice === 11){
 				toContinue = false;
 				continue;
 			}
@@ -336,8 +396,9 @@ prompt = async () => {
 			await performAction(choice);
 
 		} catch(err) {
-			console.log(err);
-		} 
+      console.log(err);
+      toContinue = false;
+    } 
 	}
 
 	db.disconnectFromDB()

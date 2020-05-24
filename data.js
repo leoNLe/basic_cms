@@ -14,7 +14,7 @@ let conn;
 
 //Create a connection with config and return promisified query, and close function with 
 //connection created accessible with getConnection();
-createConnection = (config) => {
+async function createConnection(config) {
     const connection = mysql.createConnection(config);
     return {
         query_promisify(sql, args) {
@@ -30,15 +30,15 @@ createConnection = (config) => {
     }
 }
 
-connectToDB = () =>{
+async function connectToDB() {
     conn =  createConnection(config);
 }
 
-disconnectFromDB = () => {
+async function disconnectFromDB() {
     conn.close();
 }
 
-updateManager = async (id, manager_id) => {
+async function updateManager(id, manager_id) {
     try {
         await conn.query_promisify(
             "Update employees SET ? WHERE",
@@ -52,7 +52,8 @@ updateManager = async (id, manager_id) => {
         return Promise.reject(err.code);
     }
 }
-updateRole = async (id, role_id) => {
+
+async function updateRole(id, role_id) {
     try {
         return await conn.query_promisify(
             "Update employees SET ? WHERE ?",
@@ -68,7 +69,7 @@ updateRole = async (id, role_id) => {
     }
 }
 
-getRoles = async () => {
+async function getRoles() {
     try {
         return await conn.query_promisify("SELECT * FROM roles");
     } catch (err) {
@@ -77,7 +78,7 @@ getRoles = async () => {
     };
 }
 
-getAllDepartments = async () => {
+async function getAllDepartments() {
     try {
         return await conn.query_promisify("Select * from departments");
 
@@ -87,10 +88,10 @@ getAllDepartments = async () => {
     }
 }
 
-removeEmployee = async (id) => {
+async function removeEmployee(id) {
     try {
         return await conn.query_promisify(
-            `DELETE FROM table_name
+            `DELETE FROM employees
             WHERE ?;`, 
             { id });        
         
@@ -100,7 +101,7 @@ removeEmployee = async (id) => {
     }
 }
 
-addDepartment = async (department) => {
+async function addDepartment(department) {
     try{
         await conn.query_promisify(
             "INSERT INTO departments SET ?",
@@ -114,7 +115,7 @@ addDepartment = async (department) => {
     }
 }
 
-addRole = async  ({title, salary, department_id }) => {
+async function addRole({title, salary, department_id }) {
 
     try{ 
         const result = await conn.query_promisify(
@@ -135,7 +136,7 @@ addRole = async  ({title, salary, department_id }) => {
     }
 }
 
-addEmployee =  async ({last_name, first_name, role_id, manager_id}) => {
+async function addEmployee({last_name, first_name, role_id, manager_id}) {
     try { 
         await conn.query_promisify(
             "INSERT INTO employees SET ?",
@@ -149,14 +150,14 @@ addEmployee =  async ({last_name, first_name, role_id, manager_id}) => {
         return Promise.resolve(true) ;
     } catch(err) {
         console.log(err)
-		return Promise.reject(err.code);
+        return Promise.reject(err.code);
     }
 }
 
-getEmployeesByMgr = async (manager_id) => {
+async function getEmployeesByMgr(manager_id) {
     try {
         return  conn.query_promisify(
-            `SELECT concat(employees.first_name, " ", employees.last_name)
+            `SELECT concat(employees.first_name, " ", employees.last_name) as Name
              FROM employees
              WHERE ?
             `,
@@ -167,13 +168,14 @@ getEmployeesByMgr = async (manager_id) => {
         return  resolve.reject(err.code);
     }
 }
-getEmployeesByDept =  (department) => {
+
+async function getEmployeesByDept(department) {
     return conn.query_promisify(
-                `SELECT concat(employees.first_name, " ", employees.last_name) \
-                FROM employees \ 
-                LEFT JOIN roles \
-                ON employees.role_id = roles.id \
-                WHERE ?`, 
+                `SELECT concat(employees.first_name, " ", employees.last_name) as Name 
+                    FROM employees  
+                    LEFT JOIN roles 
+                    ON employees.role_id = roles.id 
+                    WHERE ?`, 
                 {
                     department_id: department
                 })
@@ -184,7 +186,29 @@ getEmployeesByDept =  (department) => {
             })
 }
 
-getAllEmployees = async () => {
+async function removeDepartment(department_id) {  
+    try {
+
+        //remove department
+        const data = await conn.query_promisify(`DELETE FROM departments WHERE ?`,
+            {id: department_id}
+        );
+        //check if 
+
+        if(data.affectedRows > 0)
+            result = {removed: true};
+        else 
+            result = {removed: false};
+
+        return Promise.resolve(result);
+
+    } catch(err){
+        //Foreign key constraint failed.  
+        return Promise.reject(err.code);
+    }
+}
+
+async function getAllEmployees() {
 
     try {        
         return  await conn.query_promisify(
@@ -205,6 +229,20 @@ getAllEmployees = async () => {
 
 }
 
+async function removeRole(role_id) { 
+    try {
+        const result = await conn.query("DELETE FROM roles WHERE ?", 
+            { id: role_id}
+        )
+        if(result.affectedRows > 0) {
+            return {isDeleted: true};    
+        } else {
+            return {isDeleted: false};
+        }
+    } catch(err) {
+        console.log(err)
+    };
+}
 module.exports = {
     getAllEmployees,
     addEmployee,
@@ -216,8 +254,10 @@ module.exports = {
     addRole,
     addDepartment,
     removeEmployee,
+    removeDepartment,
     updateRole,
     updateManager,
-    getEmployeesByMgr
+    getEmployeesByMgr,
+    removeRole
 }
 
