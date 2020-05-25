@@ -1,0 +1,1 @@
+Basic CLI program created to learn MySQL with Node.js.
